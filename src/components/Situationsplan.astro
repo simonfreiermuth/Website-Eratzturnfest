@@ -1,0 +1,317 @@
+---
+import fs from "node:fs";
+import path from "node:path";
+import { stations, infoMarkers } from "../data/stations";
+
+// Inline the lageplan so we can attach click handlers to the numbered
+// markers and recolour them via CSS.
+const lageplanRaw = fs
+  .readFileSync(path.resolve("./public/images/lageplan.svg"), "utf-8")
+  .replace(/\swidth="[^"]*"/, "")
+  .replace(/\sheight="[^"]*"/, "");
+---
+
+<section class="section section--surface" id="situationsplan">
+  <div class="section__inner situ">
+    <header class="section-heading">
+      <span class="eyebrow">Vor Ort</span>
+      <h2 class="section-heading__title">Situationsplan</h2>
+    </header>
+
+    <div class="situ__grid">
+      <ol class="situ__legend" aria-label="Stationen und Infrastruktur">
+        {stations.map((s) => (
+          <li class="situ__legend-item" data-station={String(s.nr)} tabindex="0" role="button" aria-pressed="false">
+            <span class="badge-nr">{s.nr}</span>
+            <span class="situ__legend-name">{s.name}</span>
+          </li>
+        ))}
+        {infoMarkers.map((m) => (
+          <li
+            class="situ__legend-item situ__legend-item--info"
+            data-station={m.kind}
+            tabindex="0"
+            role="button"
+            aria-pressed="false"
+          >
+            <span class={`badge-info badge-info--${m.kind}`} aria-hidden="true">{m.symbol}</span>
+            <span class="situ__legend-name">{m.name}</span>
+          </li>
+        ))}
+      </ol>
+
+      <figure class="situ__figure">
+        <div class="situ__svg" set:html={lageplanRaw}></div>
+        <figcaption class="situ__caption">
+          Sportanlage Brugglismatt, Zeiningen — Stationsnummern antippen
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>(".situ");
+  if (root) {
+    const legendItems = Array.from(
+      root.querySelectorAll<HTMLLIElement>(".situ__legend-item"),
+    );
+    const svg = root.querySelector<SVGElement>(".situ__svg svg");
+
+    function tagMarker(marker: Element | null | undefined, key: string, label: string) {
+      if (!marker || marker.tagName.toLowerCase() !== "g") return;
+      marker.setAttribute("data-station", key);
+      marker.classList.add("station-marker");
+      marker.setAttribute("tabindex", "0");
+      marker.setAttribute("role", "button");
+      marker.setAttribute("aria-label", label);
+      marker.addEventListener("click", () => setActive(key));
+      marker.addEventListener("keydown", (e) => {
+        const ke = e as KeyboardEvent;
+        if (ke.key === "Enter" || ke.key === " ") {
+          ke.preventDefault();
+          setActive(key);
+        }
+      });
+    }
+
+    if (svg) {
+      // Numbered stations + WC + P all have the same nesting:
+      //   <g> (marker) > <g> (text wrapper) > <text>
+      // so the marker is exactly two ancestors above the text.
+      svg.querySelectorAll<SVGTextElement>("text").forEach((text) => {
+        const content = (text.textContent ?? "").trim();
+        let key: string | null = null;
+        let label = "";
+        if (/^[1-8]$/.test(content)) {
+          key = content;
+          label = `Station ${content}`;
+        } else if (content === "WC") {
+          key = "wc";
+          label = "Toiletten";
+        } else if (content === "P") {
+          key = "parking";
+          label = "Parkplatz";
+        }
+        if (!key) return;
+        tagMarker(text.parentElement?.parentElement, key, label);
+      });
+
+      // Sanität has an extra wrapper <g> around image/circle/cross:
+      //   <g> (marker) > <g> (wrapper) > <g> (rect wrapper) > <rect>
+      // so the marker is three ancestors above the red rect.
+      const redRect = svg.querySelector<SVGRectElement>('rect[style*="rgb(255,31,72)"]');
+      if (redRect) {
+        tagMarker(
+          redRect.parentElement?.parentElement?.parentElement,
+          "medical",
+          "Sanität",
+        );
+      }
+    }
+
+    legendItems.forEach((li) => {
+      const key = li.dataset.station;
+      if (!key) return;
+      li.addEventListener("click", () => setActive(key));
+      li.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setActive(key);
+        }
+      });
+    });
+
+    let active: string | null = null;
+    function setActive(key: string) {
+      const next = active === key ? null : key;
+      active = next;
+      legendItems.forEach((li) => {
+        const on = li.dataset.station === active;
+        li.classList.toggle("is-active", on);
+        li.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      // WC has two map markers — querySelectorAll handles the 1-to-N mapping.
+      svg?.querySelectorAll<SVGGElement>(".station-marker").forEach((m) => {
+        m.classList.toggle("is-active", m.getAttribute("data-station") === active);
+      });
+    }
+  }
+</script>
+
+<style>
+  .situ__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+    align-items: start;
+  }
+
+  @media (min-width: 760px) {
+    .situ__grid {
+      grid-template-columns: 0.9fr 1.1fr;
+    }
+  }
+
+  .situ__legend {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .situ__legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-muted);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+    user-select: none;
+  }
+
+  .situ__legend-item:hover {
+    background: #dbe5f3;
+  }
+
+  .situ__legend-item:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .situ__legend-item.is-active {
+    background: var(--color-primary);
+    transform: translateX(4px);
+  }
+
+  .situ__legend-item.is-active .situ__legend-name {
+    color: var(--color-on-primary);
+  }
+
+  .situ__legend-item.is-active .badge-nr {
+    background: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7);
+  }
+
+  .situ__legend-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-primary);
+    font-size: 1rem;
+    transition: color 0.2s ease;
+  }
+
+  /* Visual gap before the infrastructure group. */
+  .situ__legend-item:not(.situ__legend-item--info) + .situ__legend-item--info {
+    margin-top: var(--space-3);
+  }
+
+  .badge-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .badge-info--medical {
+    background: var(--color-surface);
+    color: #dc2626;
+    border: 2px solid #dc2626;
+    font-size: 1.5rem;
+    font-style: normal;
+    padding-bottom: 2px;
+  }
+
+  .badge-info--wc {
+    background: var(--color-accent);
+    color: var(--color-on-primary);
+    font-size: 0.78rem;
+    font-style: normal;
+    letter-spacing: 0.02em;
+  }
+
+  .badge-info--parking {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 1.125rem;
+    font-style: italic;
+  }
+
+  .situ__figure {
+    margin: 0;
+  }
+
+  .situ__svg {
+    width: 100%;
+  }
+
+  .situ__svg :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--radius-md);
+  }
+
+  /* Marker interactivity. The classes are applied via JS to nodes
+     inside the inlined SVG, so use :global() to escape Astro scoping. */
+  .situ__svg :global(.station-marker) {
+    cursor: pointer;
+    outline: none;
+  }
+
+  .situ__svg :global(.station-marker circle) {
+    transition: stroke-width 0.18s ease, fill 0.18s ease, filter 0.18s ease;
+    stroke: transparent;
+    stroke-width: 0;
+  }
+
+  .situ__svg :global(.station-marker:hover circle),
+  .situ__svg :global(.station-marker:focus-visible circle) {
+    stroke: #ffffff;
+    stroke-width: 5;
+  }
+
+  /* Active marker: solid brand blue (matches the legend's active state).
+     !important is required to override the inline `style="fill:rgb(...)"`
+     baked into the source SVG. */
+  .situ__svg :global(.station-marker.is-active circle) {
+    fill: var(--color-primary) !important;
+    stroke: #ffffff;
+    stroke-width: 7;
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.35));
+  }
+
+  /* Sanität marker keeps its white circle + red cross — only the stroke
+     turns blue so the red cross stays visible. */
+  .situ__svg :global(.station-marker[data-station="medical"].is-active circle) {
+    fill: #ffffff !important;
+    stroke: var(--color-primary);
+    stroke-width: 5;
+  }
+
+  .situ__caption {
+    margin-top: var(--space-2);
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    text-align: center;
+  }
+
+  @media (min-width: 760px) {
+    .situ__grid > .situ__figure {
+      order: 2;
+    }
+    .situ__grid > .situ__legend {
+      order: 1;
+    }
+  }
+</style>

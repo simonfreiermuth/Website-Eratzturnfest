@@ -1,0 +1,212 @@
+---
+import { clubs } from "../data/clubs";
+import { disciplines } from "../data/disciplines";
+import { schedule } from "../data/schedule";
+
+const defaultValue = "alle";
+
+// Render every row once, sorted globally by time. "Alle Vereine" is the
+// default view and reveals all rows plus the Verein column. Selecting a
+// single club hides non-matching rows and the Verein column.
+const allRows = schedule
+  .map((e) => {
+    const club = clubs.find((c) => c.id === e.clubId)!;
+    const d = disciplines[e.disciplineId];
+    return {
+      clubId: e.clubId,
+      clubName: club.name,
+      time: e.time,
+      disciplineName: d.name,
+      category: d.category,
+    };
+  })
+  .sort((a, b) => a.time.localeCompare(b.time));
+---
+
+<section class="section section--surface" id="zeitplan">
+  <div class="section__inner">
+    <header class="section-heading">
+      <span class="eyebrow">Wann startet wer?</span>
+      <h2 class="section-heading__title">Zeitplan</h2>
+    </header>
+
+    <div class="zp__controls">
+      <label class="zp__label" for="zp-club">Verein wählen</label>
+      <select id="zp-club" class="zp__select">
+        <option value="alle" selected>Alle Vereine</option>
+        {clubs.map((c) => (
+          <option value={c.id}>{c.name}</option>
+        ))}
+      </select>
+    </div>
+
+    <div class="zp__table-wrap">
+      <table class="zp__table" data-view="alle">
+        <thead>
+          <tr>
+            <th scope="col">Zeit</th>
+            <th scope="col" class="zp__verein-col">Verein</th>
+            <th scope="col">Disziplin</th>
+            <th scope="col" class="zp__cat-col">Kategorie</th>
+          </tr>
+        </thead>
+        <tbody>
+          {allRows.map((r) => (
+            <tr data-club={r.clubId}>
+              <td class="zp__time">{r.time}</td>
+              <td class="zp__verein">{r.clubName}</td>
+              <td class="zp__name">{r.disciplineName}</td>
+              <td class="zp__cat">{r.category}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+  const select = document.getElementById("zp-club") as HTMLSelectElement | null;
+  const table = document.querySelector<HTMLTableElement>(".zp__table");
+  if (select && table) {
+    const rows = table.querySelectorAll<HTMLTableRowElement>("tbody tr");
+    select.addEventListener("change", () => {
+      const value = select.value;
+      table.dataset.view = value === "alle" ? "alle" : "single";
+      rows.forEach((tr) => {
+        tr.hidden = value !== "alle" && tr.dataset.club !== value;
+      });
+    });
+  }
+</script>
+
+<style>
+  .zp__controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+    max-width: 380px;
+  }
+
+  .zp__label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-accent);
+    font-size: 0.9rem;
+  }
+
+  .zp__select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: var(--space-3) var(--space-7) var(--space-3) var(--space-4);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231E4993' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")
+      no-repeat right var(--space-4) center;
+    background-color: var(--color-surface);
+    color: var(--color-primary);
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+  }
+
+  .zp__select:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .zp__table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    background: var(--color-muted);
+    padding: var(--space-2);
+  }
+
+  .zp__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 var(--space-1);
+  }
+
+  .zp__table th,
+  .zp__table td {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .zp__table thead th {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.85rem;
+    color: var(--color-accent);
+  }
+
+  .zp__table tbody tr {
+    background: var(--color-surface);
+  }
+
+  .zp__table tbody tr td:first-child {
+    border-top-left-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+  }
+
+  .zp__table tbody tr td:last-child {
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+  }
+
+  .zp__time {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    color: var(--color-primary);
+    font-size: 1.1rem;
+    font-variant-numeric: tabular-nums;
+    width: 6rem;
+  }
+
+  .zp__verein {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-primary);
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .zp__name {
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+
+  .zp__cat {
+    color: var(--color-ink-soft);
+    font-size: 0.9rem;
+  }
+
+  /* Single-club view hides the Verein column (always the same). */
+  .zp__table[data-view="single"] .zp__verein-col,
+  .zp__table[data-view="single"] .zp__verein {
+    display: none;
+  }
+
+  /* Mobile: drop the category column to keep things tight. */
+  @media (max-width: 520px) {
+    .zp__cat-col,
+    .zp__cat {
+      display: none;
+    }
+  }
+</style>

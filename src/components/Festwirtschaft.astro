@@ -1,0 +1,137 @@
+---
+import { event } from "../data/event";
+
+const items = [
+  {
+    icon: "restaurant",
+    label: "Festwirtschaft",
+    time: event.times.festwirtschaft,
+    text: "Verpflegung den ganzen Tag.",
+  },
+  {
+    icon: "emoji_events",
+    label: "Rangverlesen",
+    time: event.times.rangverlesen,
+    text: "Verkündung der Resultate und Ehrung der Vereine.",
+  },
+  {
+    icon: "nightlife",
+    label: "Bar & Festbetrieb",
+    time: event.times.bar,
+    text: "Anstossen, geniessen, gemeinsam ausklingen lassen.",
+  },
+];
+---
+
+<section class="section section--primary" id="festwirtschaft">
+  <div class="section__inner">
+    <header class="section-heading">
+      <span class="eyebrow">Verpflegung &amp; Abend</span>
+      <h2 class="section-heading__title">Festwirtschaft</h2>
+    </header>
+
+    <ul class="fw__grid">
+      {items.map((i) => (
+        <li class="fw__card">
+          <span class="fw__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">{i.icon}</span>
+          </span>
+          <span class="fw__time">{i.time}</span>
+          <span class="fw__label">{i.label}</span>
+          <p class="fw__text">{i.text}</p>
+        </li>
+      ))}
+    </ul>
+
+    <p class="fw__credit">
+      Die Festwirtschaft wird betreut von der
+      <strong>Pensioniertengruppe der Männerriege Zeiningen</strong>
+      und dem
+      <strong>Einbeiner-Plausch-Club Zeiningen</strong>
+      — herzlichen Dank!
+    </p>
+  </div>
+</section>
+
+<style>
+  .fw__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  @media (min-width: 720px) {
+    .fw__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .fw__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-6);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+  }
+
+  .fw__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: var(--color-on-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .fw__icon .material-symbols-outlined {
+    font-size: 1.7rem;
+  }
+
+  .fw__time {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    color: var(--color-accent);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fw__label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 1.05rem;
+    color: var(--color-on-primary);
+  }
+
+  .fw__text {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.98rem;
+    line-height: 1.5;
+  }
+
+  .fw__credit {
+    margin-top: var(--space-7);
+    padding: var(--space-4) var(--space-5);
+    border-left: 3px solid var(--color-accent);
+    border-right: 3px solid var(--color-accent);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    text-align: center;
+    /* max-width: 50rem; */
+  }
+
+  .fw__credit strong {
+    color: var(--color-on-primary);
+    font-weight: 600;
+  }
+</style>

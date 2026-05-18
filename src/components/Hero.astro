@@ -1,0 +1,338 @@
+---
+import fs from "node:fs";
+import path from "node:path";
+import { getImage } from "astro:assets";
+import grungeSrc from "../assets/grunge.jpg";
+import { event } from "../data/event";
+import Countdown from "./Countdown.astro";
+
+// Inline the wordmark logo so its blue strokes can adopt the current
+// text colour (white on the deep-blue hero background) while orange
+// remains the brand orange.
+const wordmarkRaw = fs.readFileSync(
+  path.resolve("./public/images/wordmark.svg"),
+  "utf-8",
+);
+const wordmarkInline = wordmarkRaw
+  .replaceAll("rgb(30,73,147)", "currentColor")
+  .replace(/\swidth="[^"]*"/, "")
+  .replace(/\sheight="[^"]*"/, "");
+
+// Optimise the 5.7 MB grunge source into a web-friendly texture for the
+// hero's background overlay.
+const grunge = await getImage({
+  src: grungeSrc,
+  width: 1600,
+  format: "webp",
+  quality: 55,
+});
+
+const photoBase = `${import.meta.env.BASE_URL}images/`;
+const photos = [
+  { src: `${photoBase}fta.jpg`, alt: "Athletinnen und Athleten beim Fachtest Allround." },
+  { src: `${photoBase}weitsprung.jpg`, alt: "Wettkampf am Weitsprung." },
+  { src: `${photoBase}zelt.jpg`, alt: "Festbetrieb am Abend im Festzelt." },
+];
+---
+
+<section class="hero" id="top" style={`--grunge-url: url("${grunge.src}");`}>
+  <div class="hero__bg" aria-hidden="true"></div>
+
+  {/* SVG filter used by the slogan ::before to give the white pill
+      brushy, hand-painted edges. */}
+  <svg class="hero__defs" width="0" height="0" aria-hidden="true">
+    <defs>
+      <filter id="brush-edge" x="-10%" y="-25%" width="120%" height="150%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.022 0.06" numOctaves="6" seed="7" />
+        <feDisplacementMap in="SourceGraphic" scale="24" />
+      </filter>
+    </defs>
+  </svg>
+
+  <div class="hero__inner">
+    <div class="hero__wordmark" set:html={wordmarkInline} role="img" aria-label={`${event.title} ${event.subtitle}`}></div>
+
+    <div class="hero__grid">
+      <div class="hero__copy">
+        <div class="hero__location">
+          <span class="material-symbols-outlined hero__location-icon" aria-hidden="true">place</span>
+          <span class="hero__location-text">
+            <strong>{event.location.town}</strong>
+            <span>{event.location.venue}</span>
+          </span>
+        </div>
+
+        <Countdown />
+
+        <ul class="hero__times">
+          <li class="time-card">
+            <span class="time-card__icon" aria-hidden="true">
+              <span class="material-symbols-outlined">sprint</span>
+            </span>
+            <span>
+              <span class="time-card__label">Wettkampf</span><br />
+              <span class="time-card__value">{event.times.wettkampf}</span>
+            </span>
+          </li>
+          <li class="time-card">
+            <span class="time-card__icon" aria-hidden="true">
+              <span class="material-symbols-outlined">restaurant</span>
+            </span>
+            <span>
+              <span class="time-card__label">Festwirtschaft</span><br />
+              <span class="time-card__value">{event.times.festwirtschaft}</span>
+            </span>
+          </li>
+          <li class="time-card">
+            <span class="time-card__icon" aria-hidden="true">
+              <span class="material-symbols-outlined">nightlife</span>
+            </span>
+            <span>
+              <span class="time-card__label">Bar &amp; Festbetrieb</span><br />
+              <span class="time-card__value">{event.times.bar}</span>
+            </span>
+          </li>
+        </ul>
+
+        <p class="hero__slogan">{event.slogan}</p>
+      </div>
+
+      <ul class="hero__photos" aria-hidden="true">
+        {photos.map((p, i) => (
+          <li class={`hero__photo hero__photo--${i + 1}`}>
+            <img src={p.src} alt={p.alt} width="1600" height="1067" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    color: var(--color-on-primary);
+    background: var(--color-primary);
+    padding: clamp(var(--space-7), 9vw, var(--space-9)) var(--space-5);
+  }
+
+  /* Background layers: deep-blue base + soft glows + grunge overlay. */
+  .hero__bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 80% at 100% 0%, rgba(250, 158, 15, 0.20), transparent 55%),
+      radial-gradient(80% 60% at 0% 100%, rgba(255, 255, 255, 0.06), transparent 60%),
+      var(--color-primary);
+  }
+
+  .hero__bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--grunge-url) center/cover no-repeat;
+    mix-blend-mode: overlay;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  .hero__inner {
+    position: relative;
+    max-width: var(--max-content);
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+  }
+
+  /* Wordmark inherits color: white so blue strokes become white via
+     currentColor; orange stays the brand orange. */
+  .hero__wordmark {
+    color: var(--color-on-primary);
+    width: 100%;
+    max-width: 760px;
+    margin-inline: auto;
+  }
+
+  .hero__wordmark :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.18));
+  }
+
+  .hero__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+    align-items: center;
+  }
+
+  @media (min-width: 880px) {
+    .hero__grid {
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: var(--space-8);
+    }
+  }
+
+  .hero__copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .hero__location {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft);
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .hero__location-icon {
+    color: var(--color-accent);
+    font-size: 1.6rem;
+  }
+
+  .hero__location-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+
+  .hero__location-text strong {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 1.1rem;
+  }
+
+  .hero__location-text span:last-child {
+    font-size: 0.95rem;
+    color: var(--color-ink-soft);
+  }
+
+  .hero__times {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 560px) {
+    .hero__times {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+  }
+
+  /* Wide handwritten slogan with a hand-painted brush stroke background. */
+  .hero__slogan {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: var(--space-4) var(--space-6);
+    color: var(--color-primary);
+    font-family: var(--font-brush);
+    font-weight: 400;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-align: center;
+    transform: rotate(-1deg);
+    transform-origin: center;
+    isolation: isolate;
+  }
+
+  .hero__slogan::before {
+    content: "";
+    position: absolute;
+    inset: -6px -14px;
+    background: var(--color-surface);
+    border-radius: 999px;
+    filter: url(#brush-edge);
+    z-index: -1;
+  }
+
+  .hero__defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* Photo collage — overlapping polaroids on every viewport */
+  .hero__photos {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    height: 22rem;
+  }
+
+  .hero__photo {
+    position: absolute;
+    width: 65%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lift);
+    background: var(--color-muted);
+    transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
+                box-shadow 0.45s ease;
+  }
+
+  .hero__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .hero__photo--1 { top: 0;   left: 0;   transform: rotate(-3deg);   z-index: 1; }
+  .hero__photo--2 { top: 24%; left: 32%; transform: rotate(2.5deg);  z-index: 3; }
+  .hero__photo--3 { top: 50%; left: 4%;  transform: rotate(-1.5deg); z-index: 2; }
+
+  @media (min-width: 880px) {
+    .hero__photos {
+      max-width: none;
+      height: clamp(380px, 38vw, 480px);
+    }
+    .hero__photo { width: 70%; }
+    .hero__photo--1 { top: 0;   left: 0;   transform: rotate(-3deg); }
+    .hero__photo--2 { top: 28%; left: 28%; transform: rotate(2.5deg); }
+    .hero__photo--3 { top: 58%; left: 4%;  transform: rotate(-1.5deg); }
+  }
+
+  /* Hovering anywhere on the photo stack animates all three at once. */
+  .hero__photos:hover .hero__photo--1,
+  .hero__photos:focus-within .hero__photo--1 {
+    transform: rotate(-6deg) scale(1.03);
+  }
+  .hero__photos:hover .hero__photo--2,
+  .hero__photos:focus-within .hero__photo--2 {
+    transform: rotate(5deg) scale(1.03);
+  }
+  .hero__photos:hover .hero__photo--3,
+  .hero__photos:focus-within .hero__photo--3 {
+    transform: rotate(-4deg) scale(1.03);
+  }
+
+  .hero__photos:hover .hero__photo,
+  .hero__photos:focus-within .hero__photo {
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.26);
+  }
+
+  /* Material Symbols sizing inside the orange icon circle. */
+  .time-card__icon .material-symbols-outlined {
+    font-size: 1.6rem;
+    color: var(--color-on-primary);
+  }
+</style>
