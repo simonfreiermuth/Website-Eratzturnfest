@@ -9,7 +9,7 @@ A static, statically generated single-page website for **Turnfest 2026 im Wegens
 - **Astro** (TypeScript, strict). No UI framework (no React/Vue/Svelte). No Tailwind. Plain CSS with custom properties.
 - **Static output** (`output: "static"`). Deploys as plain files. GitHub Pages compatible: set `GH_PAGES_BASE=/<repo>/` when building for a project page.
 - **Node** 20+ (see `.nvmrc`).
-- **No client-side framework runtime.** Interactivity (countdown, schedule dropdown) is handled by tiny inline `<script>` blocks.
+- **No client-side framework runtime.** Interactivity (countdown, schedule dropdown, interactive lageplan) is handled by tiny inline `<script>` blocks.
 
 ## Languages
 
@@ -22,17 +22,18 @@ The per-club PDF (`assets/Ersatzturnfest Zeitplan pro Verein.pdf`) lists `18:00 
 
 If a future PDF reintroduces Turnermenü, leave it out and ask before surfacing.
 
+The Festwirtschaft is run by the **Pensioniertengruppe der Männerriege Zeiningen** and the **Einbeiner-Plausch-Club Zeiningen (EPCZ)** — credited in the Festwirtschaft section.
+
 ## Source of truth: `src/data/`
 
-All event content lives in `src/data/`:
+All event content lives in `src/data/`. Components must never hard-code event facts.
 
-- `event.ts` — date, location, key times (no `turnermenue` key).
-- `clubs.ts` — 8 participating clubs.
-- `disciplines.ts` — abbreviation → name + category. Authoritative spelling: **FTA = Fachtest Allround**, **SSB = Schulstufenbarren**.
-- `stations.ts` — 8 stations on the situation plan.
+- `event.ts` — date, location, key times (`wettkampf`, `festwirtschaft`, `rangverlesen`, `bar`; no `turnermenue` key).
+- `clubs.ts` — 8 participating clubs (TVZ, MRZ, FRZ, STVW, FRMRW, TVHD, TVHH, MRH).
+- `disciplines.ts` — abbreviation → name + category. Authoritative spelling: **FTA = Fachtest Allround**, **SSB = Schulstufenbarren**. The `category` field is no longer surfaced in the UI but is kept for future use.
+- `stations.ts` — 8 numbered stations **plus** `infoMarkers` (Sanität, WC/Toiletten, P/Parkplatz) for the Situationsplan legend.
 - `schedule.ts` — per-club schedule rows (no Turnermenü).
-
-Components must never hard-code event facts. Read from `src/data/`.
+- `organisations.ts` — the 4 footer logos with `url` field for outbound links (STV Wegenstetten, TV Zeiningen, TV Hellikon, EPCZ).
 
 ## Design tokens (`src/styles/tokens.css`)
 
@@ -48,28 +49,43 @@ Components must never hard-code event facts. Read from `src/data/`.
 --font-brush:       "Caveat Brush", cursive   /* slogan: "mir freue eus!" */
 ```
 
-Headlines: display font, 900 italic. Slogans (e.g. "mir freue eus!"): brush font, larger size, subtle rotation.
+`html { font-size: 110%; }` bumps every rem-based dimension by ~10 %.
 
-**Icons**: Google Material Symbols Outlined, loaded via the same Google Fonts URL. Use inline as `<span class="material-symbols-outlined">name</span>` (e.g. `place`, `restaurant`, `directions_run`, `local_bar`, `emoji_events`). No custom inline SVG icons.
+Headlines: display font, 900 italic. Slogans (e.g. "mir freue eus!"): brush font, larger size, subtle rotation, painted with an SVG `feTurbulence` + `feDisplacementMap` filter on a `::before` pseudo-element so the text stays crisp.
 
-**Grunge texture**: source file lives at `src/assets/grunge.jpg` (5.7 MB). It is optimised at build time via `astro:assets` (`getImage` → ~133 KB WebP) and applied as a `mix-blend-mode: overlay` layer on the hero's deep-blue background.
+**Icons**: Google Material Symbols Outlined, loaded via the same Google Fonts URL. Use inline as `<span class="material-symbols-outlined">name</span>`. Established names: `place`, `sprint`, `restaurant`, `nightlife`, `emoji_events`. No custom inline SVG icons.
+
+**Grunge texture**: source file lives at `src/assets/grunge.jpg` (5.7 MB, gitignored under `assets/`). It is optimised at build time via `astro:assets` (`getImage` → ~134 KB WebP) and applied as a `mix-blend-mode: overlay` layer on the hero **and** the footer.
+
+## Inlined SVGs
+
+Three SVGs from `assets/` are read at build time via `fs.readFileSync` and injected with `set:html`:
+
+- **Wordmark** (`Hero.astro`) — the blue stroke colour is rewritten from `rgb(30,73,147)` to `currentColor` so the logo turns white on the dark-blue hero while keeping the orange.
+- **Lageplan** (`Situationsplan.astro`) — inlined so click handlers can target the numbered markers and the Sanität marker (red cross). Marker resolution depths are **fixed**, not heuristic, because the source file has an extra unnamed `<g>` wrapper inside `<g id="map">`:
+  - Numbered + WC + P markers: `text.parentElement.parentElement` (2 levels above the `<text>`).
+  - Sanität: `rect.parentElement.parentElement.parentElement` (3 levels above a red `rgb(255,31,72)` `<rect>`).
+- **Favicon** (`public/favicon.svg`) — reuses the first subpath of the "Turnfest" wordmark for the "T" letter.
+
+Click on a legend item or a map marker toggles `is-active` on both sides. WC has **two** map markers; `setActive` uses `querySelectorAll` so both highlight together.
 
 ## Assets
 
-- `assets/` — the raw source files delivered by the organisers. **Read-only**. Do not edit.
-- `public/images/` — copies prepared for serving (`hero-collage.png`, `situationsplan.png`, `logo.svg`).
-- `public/files/` — the two PDF schedules linked from the Zeitplan section.
+- `assets/` — raw source files delivered by the organisers. **Read-only and gitignored**. Do not edit.
+- `public/images/` — copies prepared for serving (`wordmark.svg`, `logo.svg`, `lageplan.svg`, `fta.jpg`, `weitsprung.jpg`, `zelt.jpg`).
+- `public/images/clubs/` — the 4 footer logos.
+- `public/files/` — the two PDF schedules (no longer linked from the site, kept as archive).
 
-Hi-res photos / a clean site-plan SVG will arrive later. Swap them in by replacing the files under `public/images/`; the components reference them by stable file name. Club logos for the footer will land in `public/images/clubs/` — placeholders are wired up.
+Components reference assets by stable filename; swap the file under `public/images/` to upgrade a photo or the plan.
 
 ## Commands
 
 ```
-npm install          # once
-npm run dev          # local dev server on :4321
-npm run build        # produces dist/
-npm run preview      # serves dist/
-GH_PAGES_BASE=/<repo>/ npm run build   # for GitHub project pages
+npm install                              # once
+npm run dev                              # local dev server on :4321
+npm run build                            # produces dist/
+npm run preview                          # serves dist/
+GH_PAGES_BASE=/<repo>/ npm run build     # for GitHub project pages
 ```
 
 ## House rules
@@ -78,3 +94,4 @@ GH_PAGES_BASE=/<repo>/ npm run build   # for GitHub project pages
 - Don't add comments that just restate what the code does.
 - Don't introduce new top-level dependencies without asking — every dep ships to visitors.
 - When in doubt about wording, mirror the flyer's tone (short, clean, slightly informal Swiss).
+- Astro scoped CSS does **not** match elements injected via `set:html` (they lack the `data-astro-cid-*` attribute). Use `:global(...)` selectors when styling content inside an inlined SVG.
