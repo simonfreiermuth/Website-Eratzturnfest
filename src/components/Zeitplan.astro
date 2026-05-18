@@ -17,7 +17,6 @@ const allRows = schedule
       clubName: club.name,
       time: e.time,
       disciplineName: d.name,
-      category: d.category,
     };
   })
   .sort((a, b) => a.time.localeCompare(b.time));
@@ -47,7 +46,6 @@ const allRows = schedule
             <th scope="col">Zeit</th>
             <th scope="col" class="zp__verein-col">Verein</th>
             <th scope="col">Disziplin</th>
-            <th scope="col" class="zp__cat-col">Kategorie</th>
           </tr>
         </thead>
         <tbody>
@@ -56,7 +54,6 @@ const allRows = schedule
               <td class="zp__time">{r.time}</td>
               <td class="zp__verein">{r.clubName}</td>
               <td class="zp__name">{r.disciplineName}</td>
-              <td class="zp__cat">{r.category}</td>
             </tr>
           ))}
         </tbody>
@@ -191,22 +188,9 @@ const allRows = schedule
     color: var(--color-ink);
   }
 
-  .zp__cat {
-    color: var(--color-ink-soft);
-    font-size: 0.9rem;
-  }
-
   /* Single-club view hides the Verein column (always the same). */
   .zp__table[data-view="single"] .zp__verein-col,
   .zp__table[data-view="single"] .zp__verein {
     display: none;
-  }
-
-  /* Mobile: drop the category column to keep things tight. */
-  @media (max-width: 520px) {
-    .zp__cat-col,
-    .zp__cat {
-      display: none;
-    }
   }
 </style>
