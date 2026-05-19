@@ -80,12 +80,14 @@ Components reference assets by stable filename; swap the file under `public/imag
 
 ## Commands
 
+This project uses **pnpm** (a `preinstall` script blocks npm/yarn).
+
 ```
-npm install                              # once
-npm run dev                              # local dev server on :4321
-npm run build                            # produces dist/
-npm run preview                          # serves dist/
-GH_PAGES_BASE=/<repo>/ npm run build     # for GitHub project pages
+pnpm install                              # once
+pnpm dev                                  # local dev server on :4321
+pnpm build                                # produces dist/
+pnpm preview                              # serves dist/
+GH_PAGES_BASE=/<repo>/ pnpm build         # for GitHub project pages
 ```
 
 ## House rules

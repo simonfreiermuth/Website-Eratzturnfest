@@ -35,7 +35,7 @@ pnpm preview      # serves ./dist locally
 
 ## Deploy to GitHub Pages
 
-> TODO
+Pushes to `main` are built and deployed by `.github/workflows/deploy.yml`.
 
 ## Updating content
 
