@@ -7,7 +7,7 @@ A static, statically generated single-page website for **Turnfest 2026 im Wegens
 ## Tech stack (do not change without asking)
 
 - **Astro** (TypeScript, strict). No UI framework (no React/Vue/Svelte). No Tailwind. Plain CSS with custom properties.
-- **Static output** (`output: "static"`). Deploys as plain files. GitHub Pages compatible: set `GH_PAGES_BASE=/<repo>/` when building for a project page.
+- **Static output** (`output: "static"`). Deployed to GitHub Pages on the custom domain **turnfest.tvzeiningen.ch** (see `public/CNAME`).
 - **Node** 22+ (see `.nvmrc`). **pnpm** 11+ (a `preinstall` hook blocks npm/yarn).
 - **No client-side framework runtime.** Interactivity (countdown, schedule dropdown, interactive lageplan) is handled by tiny inline `<script>` blocks.
 
@@ -85,7 +85,6 @@ pnpm install                              # once
 pnpm dev                                  # local dev server on :4321
 pnpm build                                # produces dist/
 pnpm preview                              # serves dist/
-GH_PAGES_BASE=/<repo>/ pnpm build         # for GitHub project pages
 ```
 
 ## House rules
