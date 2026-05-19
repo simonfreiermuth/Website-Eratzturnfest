@@ -16,7 +16,7 @@ Static single-page website for the **Ersatzturnfest 2026** in Zeiningen.
 
 ## Prerequisites
 
-- Node.js **20+**
+- Node.js **22+**
 - pnpm 11+
 
 ## Develop

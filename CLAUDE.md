@@ -8,7 +8,7 @@ A static, statically generated single-page website for **Turnfest 2026 im Wegens
 
 - **Astro** (TypeScript, strict). No UI framework (no React/Vue/Svelte). No Tailwind. Plain CSS with custom properties.
 - **Static output** (`output: "static"`). Deploys as plain files. GitHub Pages compatible: set `GH_PAGES_BASE=/<repo>/` when building for a project page.
-- **Node** 20+ (see `.nvmrc`).
+- **Node** 22+ (see `.nvmrc`). **pnpm** 11+ (a `preinstall` hook blocks npm/yarn).
 - **No client-side framework runtime.** Interactivity (countdown, schedule dropdown, interactive lageplan) is handled by tiny inline `<script>` blocks.
 
 ## Languages
@@ -79,8 +79,6 @@ Click on a legend item or a map marker toggles `is-active` on both sides. WC has
 Components reference assets by stable filename; swap the file under `public/images/` to upgrade a photo or the plan.
 
 ## Commands
-
-This project uses **pnpm** (a `preinstall` script blocks npm/yarn).
 
 ```
 pnpm install                              # once
