@@ -1,16 +1,15 @@
 # Turnfest 2026 — Wegenstettertal
 
-Static single-page website for the **Ersatzturnfest 2026** in the Wegenstettertal, taking place on **Saturday, 20 June 2026** at Sportanlage Brugglismatt in Zeiningen.
+Static single-page website for the **Ersatzturnfest 2026** in Zeiningen.
 
 ## Tech
 
-- [Astro](https://astro.build/) with TypeScript (strict)
-- Plain CSS with design tokens (no Tailwind, no UI framework)
-- Static output — deployable to any static host (GitHub Pages, Netlify, Cloudflare Pages, …)
+- [Astro](https://astro.build/) with TypeScript
+- Static output deployed on GitHub pages
 
 ## Prerequisites
 
-- Node.js **20+** (`.nvmrc` provided)
+- Node.js **20+**
 - npm 10+
 
 ## Develop
