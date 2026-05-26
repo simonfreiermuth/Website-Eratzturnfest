@@ -50,6 +50,38 @@ const photos = [
   </svg>
 
   <div class="hero__inner">
+    <!-- PWA install bar — shown by JS on mobile only; hidden on desktop via CSS. -->
+    <div class="hero__install" id="hero-install" hidden>
+
+      <!-- Android (all browsers): primary install button.
+           Shown immediately for any Android UA.
+           Chrome → triggers native prompt; Firefox/other → flips to manual hint. -->
+      <button class="install-btn" id="install-btn" hidden>
+        <span class="material-symbols-outlined" aria-hidden="true">add_to_home_screen</span>
+        App installieren
+      </button>
+
+      <!-- Fallback for browsers without native prompt (Firefox, Samsung …).
+           Shown when the button is tapped but no window.__pwaPrompt exists. -->
+      <div class="install-manual" id="install-manual" hidden>
+        <span class="material-symbols-outlined" aria-hidden="true">more_vert</span>
+        <span>Menü → «Zum Startbildschirm»</span>
+        <button class="install-close" id="install-close-android" aria-label="Schliessen">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+
+      <!-- iOS Safari: share-sheet hint -->
+      <div class="install-ios" id="install-ios" hidden>
+        <span class="material-symbols-outlined" aria-hidden="true">ios_share</span>
+        <span>Tippe auf <strong>Teilen</strong> → «Zum Home-Bildschirm»</span>
+        <button class="install-close" id="install-close-ios" aria-label="Schliessen">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+
+    </div>
+
     <div class="hero__wordmark" set:html={wordmarkInline} role="img" aria-label={`${event.title} ${event.subtitle}`}></div>
 
     <div class="hero__grid">
@@ -335,4 +367,169 @@ const photos = [
     font-size: 1.6rem;
     color: var(--color-on-primary);
   }
+
+  /* ── PWA install bar ─────────────────────────────────────────────────── */
+  .hero__install {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Desktop: never show the install bar. */
+  @media (min-width: 880px) {
+    .hero__install {
+      display: none;
+    }
+  }
+
+  /* Android / Chrome — accent pill button */
+  .install-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-5);
+    background: var(--color-accent);
+    color: var(--color-on-primary);
+    border: none;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .install-btn:hover {
+    background: var(--color-accent-dark);
+    transform: translateY(-1px);
+  }
+
+  .install-btn .material-symbols-outlined {
+    font-size: 1.2rem;
+  }
+
+  /* Translucent hint strip — shared by iOS hint and Android manual hint */
+  .install-ios,
+  .install-manual {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: var(--radius-pill);
+    color: var(--color-on-primary);
+    font-size: 0.88rem;
+    line-height: 1.3;
+  }
+
+  .install-ios .material-symbols-outlined,
+  .install-manual .material-symbols-outlined {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  /* Dismiss × button inside the hint strips */
+  .install-close {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: var(--color-on-primary);
+    cursor: pointer;
+    padding: 2px;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  .install-close:hover {
+    opacity: 1;
+  }
+
+  .install-close .material-symbols-outlined {
+    font-size: 1.1rem;
+  }
 </style>
+
+<script>
+  (function pwaInstall() {
+    // Already running as an installed PWA — nothing to show.
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      /** @type {any} */ (window.navigator).standalone === true;
+    if (isStandalone) return;
+
+    // User already dismissed the bar this session.
+    if (sessionStorage.getItem('pwa-dismissed')) return;
+
+    const ua = navigator.userAgent;
+    const isIOS =
+      /iphone|ipad|ipod/i.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = !isIOS && /android/i.test(ua);
+
+    const wrap       = /** @type {HTMLElement}     */ (document.getElementById('hero-install'));
+    const installBtn = /** @type {HTMLButtonElement}*/ (document.getElementById('install-btn'));
+    const manualDiv  = /** @type {HTMLElement}     */ (document.getElementById('install-manual'));
+    const iosDiv     = /** @type {HTMLElement}     */ (document.getElementById('install-ios'));
+
+    function show(el) { el.hidden = false; wrap.hidden = false; }
+    function dismiss() { sessionStorage.setItem('pwa-dismissed', '1'); wrap.hidden = true; }
+
+    // ── iOS: share-sheet hint ─────────────────────────────────────────────
+    if (isIOS) {
+      show(iosDiv);
+      document.getElementById('install-close-ios')
+        ?.addEventListener('click', dismiss);
+      return; // no install button needed on iOS
+    }
+
+    // ── Android (all browsers): install button ────────────────────────────
+    // Show the button immediately for any Android UA.
+    // • Chrome / Edge: __pwaPrompt is captured early (BaseLayout is:inline)
+    //   and should already be set by the time the user taps the button.
+    // • Firefox / Samsung / …: beforeinstallprompt never fires; button
+    //   falls back to manual instructions on click.
+    if (!isAndroid) return;
+
+    show(installBtn);
+
+    // If the prompt fires after our script runs (e.g. first visit, SW just
+    // became active), keep the button visible — nothing extra needed because
+    // the click handler always reads window.__pwaPrompt at tap time.
+    document.addEventListener('pwa:installable', () => {
+      // Prompt just became available; button is already showing.
+    });
+
+    installBtn.addEventListener('click', async () => {
+      const p = /** @type {any} */ (window).__pwaPrompt;
+
+      if (p) {
+        // Native prompt available (Chrome, Edge, …) — trigger it.
+        /** @type {any} */ (window).__pwaPrompt = null;
+        try {
+          p.prompt();
+          const { outcome } = await p.userChoice;
+          // Whether accepted or dismissed, retire the button.
+        } catch (_) {
+          // prompt() failed — fall through to manual instructions
+        }
+        wrap.hidden = true;
+        return;
+      }
+
+      // No native prompt: show the "Menü → Zum Startbildschirm" instructions.
+      installBtn.hidden = true;
+      show(manualDiv);
+    });
+
+    document.getElementById('install-close-android')
+      ?.addEventListener('click', dismiss);
+
+    window.addEventListener('appinstalled', () => { wrap.hidden = true; });
+  })();
+</script>

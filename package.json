@@ -6,7 +6,9 @@
   "description": "Static one-pager for Ersatzturnfest 2026 im Wegenstettertal",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
+    "predev": "node scripts/generate-icons.mjs",
     "dev": "astro dev",
+    "prebuild": "node scripts/generate-icons.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
