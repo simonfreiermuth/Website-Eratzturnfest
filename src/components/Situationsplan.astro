@@ -19,26 +19,40 @@ const lageplanRaw = fs
     </header>
 
     <div class="situ__grid">
-      <ol class="situ__legend" aria-label="Stationen und Infrastruktur">
-        {stations.map((s) => (
-          <li class="situ__legend-item" data-station={String(s.nr)} tabindex="0" role="button" aria-pressed="false">
-            <span class="badge-nr">{s.nr}</span>
-            <span class="situ__legend-name">{s.name}</span>
-          </li>
-        ))}
-        {infoMarkers.map((m) => (
-          <li
-            class="situ__legend-item situ__legend-item--info"
-            data-station={m.kind}
-            tabindex="0"
-            role="button"
-            aria-pressed="false"
-          >
-            <span class={`badge-info badge-info--${m.kind}`} aria-hidden="true">{m.symbol}</span>
-            <span class="situ__legend-name">{m.name}</span>
-          </li>
-        ))}
-      </ol>
+      <div class="situ__legend-col">
+        <ol class="situ__legend" aria-label="Stationen und Infrastruktur">
+          {stations.map((s) => (
+            <li class="situ__legend-item" data-station={String(s.nr)} tabindex="0" role="button" aria-pressed="false">
+              <span class="badge-nr">{s.nr}</span>
+              <span class="situ__legend-name">{s.name}</span>
+            </li>
+          ))}
+          {infoMarkers.map((m) => (
+            <li
+              class="situ__legend-item situ__legend-item--info"
+              data-station={m.kind}
+              tabindex="0"
+              role="button"
+              aria-pressed="false"
+            >
+              <span class={`badge-info badge-info--${m.kind}`} aria-hidden="true">{m.symbol}</span>
+              <span class="situ__legend-name">{m.name}</span>
+            </li>
+          ))}
+        </ol>
+
+        <div class="situ__gps">
+          <button class="situ__gps-toggle" id="gps-toggle" aria-pressed="false" aria-label="Eigenen Standort auf der Karte anzeigen">
+            <span class="badge-info badge-info--gps" aria-hidden="true">
+              <span class="material-symbols-outlined">location_searching</span>
+            </span>
+            <span class="situ__legend-name">Mein Standort</span>
+          </button>
+          <p class="situ__gps-status" id="gps-status" hidden>
+            Standort wird bestimmt …
+          </p>
+        </div>
+      </div>
 
       <figure class="situ__figure">
         <div class="situ__svg" set:html={lageplanRaw}></div>
@@ -136,6 +150,150 @@ const lageplanRaw = fs
         m.classList.toggle("is-active", m.getAttribute("data-station") === active);
       });
     }
+
+    // ── GPS ──────────────────────────────────────────────────────────────────
+    // Two geographic reference corners that anchor the SVG coordinate space.
+    // top-left: top light-grey building corner
+    // bot-right: bottom-right corner of the red running track
+    // const GPS_TL = { lat: 47.544404413562766, lng: 7.867954380395259 };
+    // const GPS_BR = { lat: 47.543694695060914, lng: 7.870471307339379 };
+    const GPS_TL = { lat: 47.544487746490155, lng: 7.867735388934311 };
+    const GPS_BR = { lat: 47.54350729567280, lng: 7.870819761630830 };
+    const SVG_W = 2481;
+    const SVG_H = 3508;
+
+    function geoToSvg(lat: number, lng: number) {
+      return {
+        x: ((lng - GPS_TL.lng) / (GPS_BR.lng - GPS_TL.lng)) * SVG_W,
+        // SVG Y increases downward; latitude increases upward → invert
+        y: ((GPS_TL.lat - lat) / (GPS_TL.lat - GPS_BR.lat)) * SVG_H,
+      };
+    }
+
+    function inBounds(lat: number, lng: number) {
+      return (
+        lat >= GPS_BR.lat && lat <= GPS_TL.lat &&
+        lng >= GPS_TL.lng && lng <= GPS_BR.lng
+      );
+    }
+
+    const gpsBtn = root.querySelector<HTMLButtonElement>("#gps-toggle");
+    const gpsStatus = root.querySelector<HTMLParagraphElement>("#gps-status");
+
+    function setGpsStatus(msg: string) {
+      if (!gpsStatus) return;
+      if (msg) {
+        gpsStatus.textContent = msg;
+        gpsStatus.removeAttribute("hidden");
+      } else {
+        gpsStatus.setAttribute("hidden", "");
+      }
+    }
+
+    function setGpsIcon(state: "off" | "searching" | "on" | "outside") {
+      if (!gpsBtn) return;
+      const iconEl = gpsBtn.querySelector(".material-symbols-outlined");
+      if (iconEl) {
+        const icons = {
+          off:      "location_searching",
+          searching:"location_searching",
+          on:       "my_location",
+          outside:  "location_off",
+        } as const;
+        iconEl.textContent = icons[state];
+      }
+      gpsBtn.classList.toggle("is-searching", state === "searching");
+      gpsBtn.classList.toggle("is-enabled", state !== "off");
+    }
+
+    function updateLocationMarker(lat: number, lng: number) {
+      const svgEl = root.querySelector<SVGSVGElement>(".situ__svg svg");
+      if (!svgEl) return;
+      let marker = svgEl.querySelector<SVGGElement>("#gps-marker");
+
+      if (!marker) {
+        const NS = "http://www.w3.org/2000/svg";
+        marker = document.createElementNS(NS, "g") as SVGGElement;
+        marker.setAttribute("id", "gps-marker");
+        marker.setAttribute("role", "img");
+        marker.setAttribute("aria-label", "Dein Standort");
+
+        const pulse = document.createElementNS(NS, "circle");
+        pulse.setAttribute("r", "50");
+        pulse.setAttribute("class", "gps-pulse");
+
+        const dot = document.createElementNS(NS, "circle");
+        dot.setAttribute("r", "28");
+        dot.setAttribute("class", "gps-dot");
+        dot.setAttribute("stroke", "white");
+        dot.setAttribute("stroke-width", "10");
+
+        marker.appendChild(pulse);
+        marker.appendChild(dot);
+        svgEl.appendChild(marker);
+      }
+
+      const { x, y } = geoToSvg(lat, lng);
+      marker.setAttribute("transform", `translate(${x.toFixed(1)}, ${y.toFixed(1)})`);
+
+      if (inBounds(lat, lng)) {
+        marker.removeAttribute("hidden");
+        setGpsStatus("");
+        setGpsIcon("on");
+      } else {
+        marker.setAttribute("hidden", "");
+        setGpsStatus("Du bist ausserhalb des Geländes");
+        setGpsIcon("outside");
+      }
+    }
+
+    function removeLocationMarker() {
+      root.querySelector(".situ__svg svg")?.querySelector("#gps-marker")?.remove();
+    }
+
+    let watchId: number | null = null;
+
+    function stopGps() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      removeLocationMarker();
+      setGpsStatus("");
+      setGpsIcon("off");
+      gpsBtn?.setAttribute("aria-pressed", "false");
+    }
+
+    function startGps() {
+      if (!navigator.geolocation) {
+        setGpsStatus("GPS nicht verfügbar");
+        return;
+      }
+      setGpsIcon("searching");
+      setGpsStatus("Standort wird bestimmt …");
+      gpsBtn?.setAttribute("aria-pressed", "true");
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => updateLocationMarker(pos.coords.latitude, pos.coords.longitude),
+        (err) => {
+          // Only abort for a hard denial; transient errors (TIMEOUT,
+          // POSITION_UNAVAILABLE) leave the watch running so the dot
+          // updates again as soon as a fix is available.
+          if (err.code === 1 /* PERMISSION_DENIED */) {
+            stopGps();
+            setGpsStatus("GPS nicht verfügbar");
+          }
+        },
+        { enableHighAccuracy: true, maximumAge: 5000 },
+      );
+    }
+
+    gpsBtn?.addEventListener("click", () => {
+      if (watchId === null) startGps();
+    });
+    gpsBtn?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); gpsBtn.click(); }
+    });
   }
 </script>
 
@@ -208,6 +366,63 @@ const lageplanRaw = fs
   /* Visual gap before the infrastructure group. */
   .situ__legend-item:not(.situ__legend-item--info) + .situ__legend-item--info {
     margin-top: var(--space-3);
+  }
+
+  /* GPS opt-in section — sits below the legend list, same column. */
+  .situ__gps {
+    margin-top: var(--space-4);
+  }
+
+  .situ__gps-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    width: 100%;
+    background: var(--color-muted);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+    text-align: left;
+    user-select: none;
+  }
+
+  .situ__gps-toggle:hover {
+    background: #dbe5f3;
+  }
+
+  .situ__gps-toggle:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Badge is muted until GPS is activated; only the badge changes, never the button background. */
+  .badge-info--gps {
+    background: #9eaec5;
+    color: var(--color-on-primary);
+    font-size: 1.1rem;
+  }
+
+  .situ__gps-toggle.is-enabled .badge-info--gps {
+    background: #e53935;
+  }
+
+  /* Slow spin while awaiting the first geolocation fix. */
+  .situ__gps-toggle.is-searching .material-symbols-outlined {
+    animation: gps-spin 1.5s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes gps-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .situ__gps-status {
+    margin: var(--space-2) 0 0 var(--space-4);
+    font-size: 0.85rem;
+    color: var(--color-ink);
+    font-family: var(--font-body);
   }
 
   .badge-info {
@@ -299,6 +514,21 @@ const lageplanRaw = fs
     stroke-width: 5;
   }
 
+  /* GPS location marker — injected into the SVG by JS. */
+  .situ__svg :global(#gps-marker .gps-dot) {
+    fill: #e53935;
+  }
+
+  .situ__svg :global(#gps-marker .gps-pulse) {
+    fill: rgba(229, 57, 53, 0.35);
+    animation: gps-pulse 2s ease-out infinite;
+  }
+
+  @keyframes gps-pulse {
+    0%   { r: 30; opacity: 0.6; }
+    100% { r: 90; opacity: 0;   }
+  }
+
   .situ__caption {
     margin-top: var(--space-2);
     font-size: 0.9rem;
@@ -310,7 +540,7 @@ const lageplanRaw = fs
     .situ__grid > .situ__figure {
       order: 2;
     }
-    .situ__grid > .situ__legend {
+    .situ__grid > .situ__legend-col {
       order: 1;
     }
   }

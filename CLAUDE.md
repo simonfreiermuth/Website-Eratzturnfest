@@ -10,6 +10,7 @@ A static, statically generated single-page website for **Turnfest 2026 im Wegens
 - **Static output** (`output: "static"`). Deployed to GitHub Pages on the custom domain **turnfest.tvzeiningen.ch** (see `public/CNAME`).
 - **Node** 22+ (see `.nvmrc`). **pnpm** 11+ (a `preinstall` hook blocks npm/yarn).
 - **No client-side framework runtime.** Interactivity (countdown, schedule dropdown, interactive lageplan) is handled by tiny inline `<script>` blocks.
+- **PWA** — the site is installable on iOS and Android (see below).
 
 ## Languages
 
@@ -53,7 +54,7 @@ All event content lives in `src/data/`. Components must never hard-code event fa
 
 Headlines: display font, 900 italic. Slogans (e.g. "mir freue eus!"): brush font, larger size, subtle rotation, painted with an SVG `feTurbulence` + `feDisplacementMap` filter on a `::before` pseudo-element so the text stays crisp.
 
-**Icons**: Google Material Symbols Outlined, loaded via the same Google Fonts URL. Use inline as `<span class="material-symbols-outlined">name</span>`. Established names: `place`, `sprint`, `restaurant`, `nightlife`, `emoji_events`. No custom inline SVG icons.
+**Icons**: Google Material Symbols Outlined, loaded via the same Google Fonts URL. Use inline as `<span class="material-symbols-outlined">name</span>`. Established names: `place`, `sprint`, `restaurant`, `nightlife`, `emoji_events`, `add_to_home_screen`, `ios_share`, `more_vert`, `close`. No custom inline SVG icons.
 
 **Grunge texture**: source file lives at `src/assets/grunge.jpg` (5.7 MB, gitignored under `assets/`). It is optimised at build time via `astro:assets` (`getImage` → ~134 KB WebP) and applied as a `mix-blend-mode: overlay` layer on the hero **and** the footer.
 
@@ -78,12 +79,53 @@ Click on a legend item or a map marker toggles `is-active` on both sides. WC has
 
 Components reference assets by stable filename; swap the file under `public/images/` to upgrade a photo or the plan.
 
+## PWA
+
+The site is a Progressive Web App installable on iOS and Android. Desktop installation is intentionally not promoted.
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `public/manifest.webmanifest` | Web App Manifest (name, theme colour, icons, `display: standalone`) |
+| `public/sw.js` | Service worker — cache-first for all same-origin GET requests; precaches `/` on install so the site works offline at the venue |
+| `public/icon-192.png` | Android launcher icon — **generated** from `public/favicon.svg` |
+| `public/icon-512.png` | Android splash / install dialog icon — **generated** |
+| `public/apple-touch-icon.png` | iOS home-screen icon (180 × 180) — **generated** |
+| `scripts/generate-icons.mjs` | Generates the three PNGs above using `sharp`; runs automatically via `predev` / `prebuild` hooks |
+
+To regenerate icons manually (e.g. after changing `favicon.svg`):
+```
+node scripts/generate-icons.mjs
+```
+
+### Install bar (`Hero.astro`)
+
+A mobile-only bar (`display: none` at ≥ 880 px) at the top of the hero section. Hidden on load; shown by JS based on UA and state:
+
+- **Android — Chrome/Edge**: shows an *App installieren* button. On tap, fires `window.__pwaPrompt.prompt()` (the captured `beforeinstallprompt` event). If the native prompt isn't available yet (first visit, SW not controlling yet), falls back to showing "Menü → «Zum Startbildschirm»" instructions.
+- **Android — Firefox / Samsung Internet / other**: no `beforeinstallprompt` support; shows "Menü → «Zum Startbildschirm»" instructions immediately on tap.
+- **iOS Safari**: shows a share-sheet hint ("Tippe auf Teilen → «Zum Home-Bildschirm»") with a dismiss ×. Dismissed state is stored in `sessionStorage`.
+- **Already installed (standalone mode)**: bar is never shown.
+
+### `beforeinstallprompt` timing
+
+Chrome fires `beforeinstallprompt` after the service worker controls the page. On a brand-new first visit the event may not fire until the next page load. To handle this, `BaseLayout.astro` registers the listener in a synchronous `is:inline` script (runs before any deferred module bundle) and stores the event on `window.__pwaPrompt`. The Hero script reads that global at tap time, so early and late firings are both handled.
+
+### Service worker cache version
+
+The cache is keyed as `turnfest-2026-v1` in `public/sw.js`. Bump this string when deploying significant content changes to force returning visitors to pick up fresh assets.
+
+### Future: location services
+
+The service worker and manifest are already in place. Add a `geolocation` call where needed (e.g. in `Situationsplan.astro`) — the browser will prompt for permission automatically. No SW changes required.
+
 ## Commands
 
 ```
 pnpm install                              # once
-pnpm dev                                  # local dev server on :4321
-pnpm build                                # produces dist/
+pnpm dev                                  # local dev server on :4321  (also runs generate-icons)
+pnpm build                                # produces dist/              (also runs generate-icons)
 pnpm preview                              # serves dist/
 ```
 
@@ -94,3 +136,4 @@ pnpm preview                              # serves dist/
 - Don't introduce new top-level dependencies without asking — every dep ships to visitors.
 - When in doubt about wording, mirror the flyer's tone (short, clean, slightly informal Swiss).
 - Astro scoped CSS does **not** match elements injected via `set:html` (they lack the `data-astro-cid-*` attribute). Use `:global(...)` selectors when styling content inside an inlined SVG.
+- **`[hidden]` vs CSS `display`**: `reset.css` includes `[hidden] { display: none !important }`. Always use the HTML `hidden` attribute (not a CSS class) to toggle element visibility in JS — do not remove it with a CSS `display` rule on the same element.
