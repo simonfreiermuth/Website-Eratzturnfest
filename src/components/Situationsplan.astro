@@ -21,6 +21,13 @@ const lageplanRaw = fs
     <div class="situ__grid">
       <div class="situ__legend-col">
         <ol class="situ__legend" aria-label="Stationen und Infrastruktur">
+          <li class="situ__gps-toggle" id="gps-toggle" aria-pressed="false" aria-label="Eigenen Standort auf der Karte anzeigen">
+            <span class="badge-info badge-info--gps" aria-hidden="true">
+              <span class="material-symbols-outlined">location_searching</span>
+            </span>
+            <span class="situ__legend-name">Mein Standort</span>
+          </li>
+
           {stations.map((s) => (
             <li class="situ__legend-item" data-station={String(s.nr)} tabindex="0" role="button" aria-pressed="false">
               <span class="badge-nr">{s.nr}</span>
@@ -40,18 +47,9 @@ const lageplanRaw = fs
             </li>
           ))}
         </ol>
-
-        <div class="situ__gps">
-          <button class="situ__gps-toggle" id="gps-toggle" aria-pressed="false" aria-label="Eigenen Standort auf der Karte anzeigen">
-            <span class="badge-info badge-info--gps" aria-hidden="true">
-              <span class="material-symbols-outlined">location_searching</span>
-            </span>
-            <span class="situ__legend-name">Mein Standort</span>
-          </button>
-          <p class="situ__gps-status" id="gps-status" hidden>
-            Standort wird bestimmt …
-          </p>
-        </div>
+        <p class="situ__gps-status" id="gps-status" hidden>
+          Standort wird bestimmt …
+        </p>
       </div>
 
       <figure class="situ__figure">
@@ -542,6 +540,86 @@ const lageplanRaw = fs
     }
     .situ__grid > .situ__legend-col {
       order: 1;
+    }
+  }
+
+  /* ── Mobile: horizontal 2-row legend strip overlapping the map ── */
+  @media (max-width: 759px) {
+    /* Collapse the gap — overlap is achieved with negative margin instead. */
+    .situ__grid {
+      gap: 0;
+    }
+
+    /* Map comes first on mobile. */
+    .situ__grid > .situ__figure {
+      order: -1;
+    }
+
+    /* Caption is redundant when the legend chip strip is right there. */
+    .situ__caption {
+      display: none;
+    }
+
+    /* Pull the legend panel up so it overlaps the map bottom.
+       min-width: 0 prevents the grid item from expanding beyond its 1fr
+       track to fit the legend's content — overflow-x: auto on the legend
+       itself handles the horizontal scroll within the clamped column. */
+    .situ__legend-col {
+      margin-top: -1.75rem;
+      position: relative;
+      z-index: 2;
+      min-width: 0;
+    }
+
+    /* 2-row horizontal grid, scrollable, sized to content. */
+    .situ__legend {
+      display: grid;
+      grid-template-rows: auto auto;
+      grid-auto-flow: column;
+      grid-auto-columns: max-content;
+      flex-direction: unset; /* reset the vertical flex */
+      overflow-x: auto;
+      overflow-y: visible;
+      column-gap: var(--space-2);
+      row-gap: var(--space-2);
+      padding: var(--space-3);
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.12);
+      scrollbar-width: none; /* Firefox */
+    }
+
+    .situ__legend::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Items are only as wide as their content. */
+    .situ__legend-item {
+      white-space: nowrap;
+      padding: var(--space-2) var(--space-3);
+    }
+
+    /* Horizontal shift makes no sense in a row — use a scale pulse instead. */
+    .situ__legend-item.is-active {
+      transform: scale(1.04);
+    }
+
+    /* No vertical gap before the info group (items are columnar now). */
+    .situ__legend-item:not(.situ__legend-item--info) + .situ__legend-item--info {
+      margin-top: 0;
+    }
+
+    /* GPS panel sits flush below the legend strip, same white background. */
+    .situ__gps {
+      margin-top: 0;
+      padding: 0 var(--space-3) var(--space-3);
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    .situ__gps-status {
+      margin-left: 0;
     }
   }
 </style>
