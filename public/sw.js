@@ -1,10 +1,12 @@
 /**
- * Service worker — cache-first strategy for same-origin assets.
+ * Service worker — network-first strategy for same-origin assets.
  *
- * Bump CACHE_NAME whenever you make a significant content change so
- * returning visitors pick up fresh HTML/CSS/JS.
+ * Always tries the network so visitors get fresh content; falls back to the
+ * cache only when the network is unavailable (offline at the venue, etc.).
+ *
+ * Bump CACHE_NAME whenever you want to evict old cached responses entirely.
  */
-const CACHE_NAME = 'turnfest-2026-v1';
+const CACHE_NAME = 'turnfest-2026-v2';
 
 // Resources fetched eagerly on first install so the site works offline.
 const PRECACHE_URLS = ['/', '/manifest.webmanifest', '/favicon.svg'];
@@ -34,7 +36,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+// ── Fetch — network-first, cache fallback ─────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests to the same origin.
   if (event.request.method !== 'GET') return;
@@ -42,17 +44,18 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== location.origin) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(event.request).then((response) => {
-        // Cache successful, non-opaque responses.
+    fetch(event.request)
+      .then((response) => {
+        // Cache successful, non-opaque responses so they're available offline.
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
-      });
-    }),
+      })
+      .catch(() =>
+        // Network failed (offline) — serve whatever we have cached.
+        caches.match(event.request),
+      ),
   );
 });
