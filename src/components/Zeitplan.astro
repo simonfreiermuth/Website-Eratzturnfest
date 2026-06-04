@@ -26,7 +26,7 @@ const allRows = schedule
   <div class="section__inner">
     <header class="section-heading">
       <span class="eyebrow">Wann startet wer?</span>
-      <h2 class="section-heading__title">Zeitplan</h2>
+      <h2 class="section-heading__title">Zeitplan <span class="zp__updated">aktualisiert (04.06.2026)</span></h2>
     </header>
 
     <div class="zp__controls">
@@ -78,6 +78,24 @@ const allRows = schedule
 </script>
 
 <style>
+  .zp__updated {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.4em;
+    padding: 0.1em 0.55em 0.15em;
+    background: var(--color-accent);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 0.45em;
+    font-weight: 900;
+    font-style: normal;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    position: relative;
+    top: -0.15em;
+  }
+
   .zp__controls {
     display: flex;
     flex-direction: column;
