@@ -1,0 +1,135 @@
+---
+import { clubs } from "../data/clubs";
+import { ranking } from "../data/ranking";
+
+const rows = ranking
+  .map((r) => ({
+    rank: r.rank,
+    clubName: clubs.find((c) => c.id === r.clubId)!.name,
+    note: r.note.toFixed(2),
+    einsaetze: r.einsaetze,
+  }))
+  .sort((a, b) => a.rank - b.rank);
+---
+
+<section class="section section--surface" id="rangliste">
+  <div class="section__inner">
+    <header class="section-heading">
+      <span class="eyebrow">Wer hat gewonnen?</span>
+      <h2 class="section-heading__title">Rangliste</h2>
+    </header>
+
+    <div class="rl__table-wrap">
+      <table class="rl__table">
+        <thead>
+          <tr>
+            <th scope="col">Rang</th>
+            <th scope="col">Verein</th>
+            <th scope="col" class="rl__num-col">Note</th>
+            <th scope="col" class="rl__num-col">Einsätze Tu/Ti</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr>
+              <td class="rl__rank">{r.rank}</td>
+              <td class="rl__verein">{r.clubName}</td>
+              <td class="rl__note">{r.note}</td>
+              <td class="rl__einsaetze">{r.einsaetze}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<style>
+  .rl__table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    background: var(--color-muted);
+    padding: var(--space-2);
+  }
+
+  .rl__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 var(--space-1);
+  }
+
+  .rl__table th,
+  .rl__table td {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .rl__table thead th {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.85rem;
+    color: var(--color-accent);
+  }
+
+  /* Numeric columns sit right of the long Verein name. */
+  .rl__num-col {
+    text-align: right;
+  }
+
+  .rl__table tbody tr {
+    background: var(--color-surface);
+  }
+
+  .rl__table tbody tr td:first-child {
+    border-top-left-radius: var(--radius-sm);
+    border-bottom-left-radius: var(--radius-sm);
+  }
+
+  .rl__table tbody tr td:last-child {
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
+  }
+
+  .rl__rank {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    color: var(--color-primary);
+    font-size: 1.2rem;
+    font-variant-numeric: tabular-nums;
+    width: 4rem;
+  }
+
+  .rl__verein {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-primary);
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .rl__note {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    color: var(--color-primary);
+    font-size: 1.1rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .rl__einsaetze {
+    font-weight: 500;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+</style>

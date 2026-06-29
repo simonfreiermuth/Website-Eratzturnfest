@@ -8,7 +8,7 @@ export const event = {
     town: "Zeiningen",
     venue: "Sportanlage Brugglismatt",
   },
-  slogan: "mir freue eus!",
+  slogan: "schön sinder debi gsi!",
   times: {
     wettkampf: "12:00 – 17:30",
     festwirtschaft: "12:30 – 20:00",

@@ -4,7 +4,6 @@ import path from "node:path";
 import { getImage } from "astro:assets";
 import grungeSrc from "../assets/grunge.jpg";
 import { event } from "../data/event";
-import Countdown from "./Countdown.astro";
 
 // Inline the wordmark logo so its blue strokes can adopt the current
 // text colour (white on the deep-blue hero background) while orange
@@ -93,8 +92,6 @@ const photos = [
             <span>{event.location.venue}</span>
           </span>
         </div>
-
-        <Countdown />
 
         <ul class="hero__times">
           <li class="time-card">
